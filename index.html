@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f0f0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Horas">
+  <title>Registro de Horas</title>
+  <link rel="manifest" href="manifest.json">
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap"
+    rel="stylesheet">
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
+
+  <style>
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --surface2: #242424;
+      --border: #2e2e2e;
+      --accent: #d4ff6e;
+      --text: #f0f0f0;
+      --text2: #888;
+      --text3: #555;
+      --danger: #ff5f57;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent
+    }
+
+    html,
+    body {
+      height: 100%;
+      overflow: hidden
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.5
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh
+    }
+
+    .header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between
+    }
+
+    .header-title {
+      font-size: 17px;
+      font-weight: 500;
+      letter-spacing: -.02em
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px
+    }
+
+    .header-date {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--text2)
+    }
+
+    .sync-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text3);
+      transition: background .3s
+    }
+
+    .sync-indicator.syncing {
+      background: #f0a500;
+      animation: pulse 1s infinite
+    }
+
+    .sync-indicator.ok {
+      background: #4caf50
+    }
+
+    .sync-indicator.error {
+      background: var(--danger)
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .4
+      }
+    }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 0 0 80px
+    }
+
+    .nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      display: flex;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      z-index: 100
+    }
+
+    .nav-btn {
+      flex: 1;
+      padding: 12px 8px;
+      text-align: center;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--text2);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: color .15s
+    }
+
+    .nav-btn .icon {
+      font-size: 20px;
+      line-height: 1
+    }
+
+    .nav-btn.active {
+      color: var(--accent)
+    }
+
+    .panel {
+      display: none
+    }
+
+    .panel.active {
+      display: block
+    }
+
+    /* FORM */
+    .form-section {
+      padding: 16px 20px 0
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: 10px
+    }
+
+    .field {
+      margin-bottom: 10px
+    }
+
+    .field label {
+      font-size: 12px;
+      color: var(--text2);
+      display: block;
+      margin-bottom: 4px
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      -webkit-appearance: none;
+      appearance: none
+    }
+
+    .field textarea {
+      resize: none;
+      height: 80px
+    }
+
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      outline: none;
+      border-color: var(--accent)
+    }
+
+    .row2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px
+    }
+
+    .chip-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px
+    }
+
+    .chip {
+      padding: 7px 14px;
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 13px;
+      cursor: pointer;
+      background: var(--surface);
+      color: var(--text2);
+      transition: all .15s;
+      user-select: none
+    }
+
+    .chip.on {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #0f0f0f;
+      font-weight: 500
+    }
+
+    .km-wrap {
+      position: relative
+    }
+
+    .km-wrap input {
+      padding-right: 36px
+    }
+
+    .km-unit {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 12px;
+      color: var(--text3);
+      font-family: 'DM Mono', monospace
+    }
+
+    .save-btn {
+      margin: 20px 20px 0;
+      width: calc(100% - 40px);
+      padding: 14px;
+      background: var(--accent);
+      color: #0f0f0f;
+      border: none;
+      border-radius: var(--radius);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s
+    }
+
+    .save-btn:active {
+      opacity: .8;
+      transform: scale(.98)
+    }
+
+    .save-btn:disabled {
+      opacity: .5;
+      cursor: not-allowed
+    }
+
+    /* RESUMEN */
+    .filter-bar {
+      padding: 14px 20px;
+      display: flex;
+      gap: 8px;
+      align-items: center
+    }
+
+    .filter-bar input {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 9px 12px;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 14px
+    }
+
+    .filter-bar input:focus {
+      outline: none;
+      border-color: var(--accent)
+    }
+
+    .btn-ghost {
+      padding: 9px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: none;
+      color: var(--text2);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap
+    }
+
+    .day-block {
+      margin: 0 20px 16px
+    }
+
+    .day-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 0 0 8px
+    }
+
+    .day-name {
+      font-weight: 500;
+      font-size: 15px
+    }
+
+    .day-total {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--text2)
+    }
+
+    .entry-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      position: relative
+    }
+
+    .entry-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 6px
+    }
+
+    .entry-client {
+      font-weight: 500;
+      font-size: 15px;
+      flex: 1
+    }
+
+    .entry-time {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--accent);
+      white-space: nowrap
+    }
+
+    .entry-site {
+      font-size: 13px;
+      color: var(--text2);
+      margin-bottom: 4px
+    }
+
+    .entry-obra {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--text3);
+      margin-bottom: 6px
+    }
+
+    .entry-desc {
+      font-size: 13px;
+      color: var(--text2);
+      margin-bottom: 8px;
+      line-height: 1.4
+    }
+
+    .entry-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px
+    }
+
+    .entry-chip {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 100px;
+      background: var(--surface2);
+      color: var(--text2);
+      border: 1px solid var(--border)
+    }
+
+    .entry-chip.active {
+      background: #1e2e0a;
+      color: var(--accent);
+      border-color: #3a5a10
+    }
+
+    .del-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: none;
+      color: var(--text3);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 6px;
+      line-height: 1
+    }
+
+    .del-btn:active {
+      color: var(--danger)
+    }
+
+    .empty {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--text3);
+      font-size: 14px
+    }
+
+    /* AJUSTES */
+    .settings-section {
+      padding: 16px 20px
+    }
+
+    .settings-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 12px
+    }
+
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border)
+    }
+
+    .settings-row:last-child {
+      border-bottom: none
+    }
+
+    .settings-row.col {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px
+    }
+
+    .settings-label {
+      font-size: 14px
+    }
+
+    .settings-sub {
+      font-size: 12px;
+      color: var(--text2);
+      margin-top: 2px
+    }
+
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 26px;
+      cursor: pointer;
+      flex-shrink: 0
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0
+    }
+
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--surface2);
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      transition: background .2s
+    }
+
+    .toggle input:checked~.toggle-track {
+      background: var(--accent);
+      border-color: var(--accent)
+    }
+
+    .toggle-thumb {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      background: var(--text2);
+      border-radius: 50%;
+      transition: transform .2s, background .2s
+    }
+
+    .toggle input:checked~.toggle-track .toggle-thumb {
+      transform: translateX(18px);
+      background: #0f0f0f
+    }
+
+    /* TIME PILLS */
+    .time-input-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap
+    }
+
+    .time-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px
+    }
+
+    .time-badge input[type=time] {
+      background: none;
+      border: none;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 14px;
+      width: 80px;
+      padding: 0
+    }
+
+    .time-badge input[type=time]:focus {
+      outline: none
+    }
+
+    .remove-time {
+      background: none;
+      border: none;
+      color: var(--text3);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 0 2px
+    }
+
+    .add-time-btn {
+      padding: 6px 12px;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-sm);
+      background: none;
+      color: var(--text2);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      cursor: pointer
+    }
+
+    /* CALENDAR (festivos) */
+    .cal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px
+    }
+
+    .cal-header span {
+      font-size: 14px;
+      font-weight: 500
+    }
+
+    .cal-nav {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text2);
+      padding: 4px 10px;
+      cursor: pointer;
+      font-size: 14px;
+      font-family: 'DM Sans', sans-serif
+    }
+
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      text-align: center
+    }
+
+    .cal-dow {
+      font-size: 11px;
+      color: var(--text3);
+      padding: 4px 0;
+      font-family: 'DM Mono', monospace
+    }
+
+    .cal-day {
+      font-size: 13px;
+      padding: 6px 4px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all .15s;
+      line-height: 1;
+      border: 1px solid transparent
+    }
+
+    .cal-day:hover {
+      background: var(--surface2)
+    }
+
+    .cal-day.empty {
+      cursor: default
+    }
+
+    .cal-day.weekend {
+      color: var(--text3)
+    }
+
+    .cal-day.holiday {
+      background: #1e2e0a;
+      color: var(--accent);
+      border-color: #3a5a10;
+      font-weight: 500
+    }
+
+    .cal-day.today-mark {
+      border-color: var(--text3)
+    }
+
+    .cal-legend {
+      display: flex;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text2);
+      padding-top: 8px
+    }
+
+    .cal-legend span {
+      display: flex;
+      align-items: center;
+      gap: 4px
+    }
+
+    .leg-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%
+    }
+
+    /* LOGIN */
+    .login-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      z-index: 999;
+      padding: 40px
+    }
+
+    .login-overlay.hidden {
+      display: none
+    }
+
+    .login-logo {
+      font-size: 48px
+    }
+
+    .login-title {
+      font-size: 22px;
+      font-weight: 500;
+      letter-spacing: -.02em;
+      text-align: center
+    }
+
+    .login-sub {
+      font-size: 14px;
+      color: var(--text2);
+      text-align: center;
+      line-height: 1.6;
+      max-width: 280px
+    }
+
+    .google-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #fff;
+      color: #333;
+      border: none;
+      border-radius: var(--radius);
+      padding: 12px 24px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      transition: opacity .15s
+    }
+
+    .google-btn:hover {
+      opacity: .9
+    }
+
+    .google-btn img {
+      width: 20px;
+      height: 20px
+    }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%) translateY(8px);
+      background: var(--accent);
+      color: #0f0f0f;
+      padding: 9px 20px;
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 500;
+      opacity: 0;
+      transition: opacity .2s, transform .2s;
+      pointer-events: none;
+      z-index: 999;
+      white-space: nowrap
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0)
+    }
+
+    ::-webkit-scrollbar {
+      width: 0
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- LOGIN OVERLAY -->
+  <div class="login-overlay" id="login-overlay">
+    <div class="login-logo">🕐</div>
+    <div class="login-title">Registro de Horas</div>
+    <div class="login-sub">Inicia sesión con Google para guardar tus datos en Drive y recibir notificaciones</div>
+    <button class="google-btn" onclick="signInGoogle()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+      Entrar con Google
+    </button>
+  </div>
+
+  <div class="app">
+    <div class="header">
+      <div class="header-title">Registro de horas</div>
+      <div class="header-right">
+        <div class="sync-indicator" id="sync-dot" title="Estado sincronización"></div>
+        <div class="header-date" id="hdr-date"></div>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- NUEVA ENTRADA -->
+      <div class="panel active" id="panel-nueva">
+        <div class="form-section">
+          <div class="row2">
+            <div class="field"><label>Fecha</label><input type="date" id="f-fecha"></div>
+            <div class="field"><label>Cliente</label><input type="text" id="f-cliente" placeholder="Cliente"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Hora inicio</label><input type="time" id="f-inicio"></div>
+            <div class="field"><label>Hora fin</label><input type="time" id="f-fin"></div>
+          </div>
+          <div class="field"><label>Sitio / Ubicación</label><input type="text" id="f-sitio"
+              placeholder="Dirección o lugar"></div>
+          <div class="field"><label>Nº obra / Nº albarán</label><input type="text" id="f-obra"
+              placeholder="OBR-001 · ALB-045"></div>
+          <div class="field"><label>Descripción</label><textarea id="f-desc"
+              placeholder="Describe el trabajo realizado..."></textarea></div>
+        </div>
+        <div class="form-section">
+          <div class="section-label">Extras</div>
+          <div class="chip-group">
+            <div class="chip" id="chip-coche" onclick="toggleChip('coche')">Coche empresa</div>
+            <div class="chip" id="chip-comida" onclick="toggleChip('comida')">Comida</div>
+            <div class="chip" id="chip-cena" onclick="toggleChip('cena')">Cena</div>
+          </div>
+        </div>
+        <div class="form-section">
+          <div class="section-label">Kilómetros coche personal</div>
+          <div class="field" style="max-width:140px">
+            <div class="km-wrap">
+              <input type="number" id="f-km" min="0" step="1" placeholder="0">
+              <span class="km-unit">km</span>
+            </div>
+          </div>
+        </div>
+        <button class="save-btn" id="save-btn" onclick="guardar()">Guardar entrada</button>
+        <div style="height:8px"></div>
+      </div>
+
+      <!-- RESUMEN -->
+      <div class="panel" id="panel-resumen">
+        <div class="filter-bar">
+          <input type="date" id="r-fecha" oninput="renderResumen()">
+          <button class="btn-ghost" onclick="document.getElementById('r-fecha').value='';renderResumen()">Todo</button>
+        </div>
+        <div id="resumen-list"></div>
+      </div>
+
+      <!-- AJUSTES -->
+      <div class="panel" id="panel-ajustes">
+        <div class="settings-section">
+
+          <div class="section-label" style="margin-bottom:10px">Cuenta</div>
+          <div class="settings-card">
+            <div class="settings-row">
+              <div>
+                <div class="settings-label" id="user-name">—</div>
+                <div class="settings-sub" id="user-email">—</div>
+              </div>
+              <button class="btn-ghost" onclick="signOut()">Salir</button>
+            </div>
+          </div>
+
+          <div class="section-label" style="margin-bottom:10px">Notificaciones</div>
+          <div class="settings-card">
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Activar recordatorios</div>
+                <div class="settings-sub">Aviso aunque la app esté cerrada</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="notif-toggle" onchange="toggleNotifs()">
+                <div class="toggle-track">
+                  <div class="toggle-thumb"></div>
+                </div>
+              </label>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Avisar fines de semana</div>
+                <div class="settings-sub">Sáb y Dom</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="weekend-toggle" onchange="saveCfg()">
+                <div class="toggle-track">
+                  <div class="toggle-thumb"></div>
+                </div>
+              </label>
+            </div>
+            <div class="settings-row col">
+              <div class="settings-label">Horarios de aviso</div>
+              <div class="time-input-row" id="times-list"></div>
+              <button class="add-time-btn" onclick="addTime()">+ Añadir hora</button>
+            </div>
+          </div>
+
+          <div class="section-label" style="margin-bottom:10px">Días festivos (sin notificación)</div>
+          <div class="settings-card">
+            <div class="settings-row col">
+              <div class="cal-header" style="width:100%">
+                <button class="cal-nav" onclick="calPrev()">‹</button>
+                <span id="cal-title"></span>
+                <button class="cal-nav" onclick="calNext()">‹</button>
+              </div>
+              <div class="cal-grid" id="cal-grid"></div>
+              <div class="cal-legend">
+                <span>
+                  <div class="leg-dot" style="background:var(--accent)"></div>Festivo marcado
+                </span>
+                <span>
+                  <div class="leg-dot" style="background:var(--text3)"></div>Hoy
+                </span>
+              </div>
+              <div style="font-size:12px;color:var(--text2)">Toca un día para marcarlo/desmarcarlo como festivo</div>
+            </div>
+          </div>
+
+          <div class="section-label" style="margin-bottom:10px">Datos</div>
+          <div class="settings-card">
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Exportar CSV</div>
+                <div class="settings-sub">Descarga para Excel</div>
+              </div>
+              <button class="btn-ghost" onclick="exportCSV()">Exportar</button>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Ver en Google Sheets</div>
+                <div class="settings-sub">Abre la hoja de cálculo</div>
+              </div>
+              <button class="btn-ghost" onclick="openSheet()">Abrir</button>
+            </div>
+          </div>
+
+          <div style="font-size:12px;color:var(--text3);text-align:center;padding-top:4px">
+            Datos sincronizados con Google Sheets
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <button class="nav-btn active" id="nav-nueva" onclick="showPanel('nueva')">
+        <span class="icon">＋</span>Nueva
+      </button>
+      <button class="nav-btn" id="nav-resumen" onclick="showPanel('resumen')">
+        <span class="icon">☰</span>Resumen
+      </button>
+      <button class="nav-btn" id="nav-ajustes" onclick="showPanel('ajustes')">
+        <span class="icon">⚙</span>Ajustes
+      </button>
+    </nav>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════
+    // CONFIGURACIÓN — rellena estos valores tras crear tu proyecto
+    // ═══════════════════════════════════════════════════════
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyDXbPXsG-L6LSc6FZ3b4ET8vnqJIs3pGM8",
+      authDomain: "horas-trabajo-d3cc8.firebaseapp.com",
+      projectId: "horas-trabajo-d3cc8",
+      storageBucket: "horas-trabajo-d3cc8.firebasestorage.app",
+      messagingSenderId: "635810073772",
+      appId: "1:635810073772:web:247ce5ef801c80da462309"
+    };
+    const VAPID_KEY = "BI1A2Il3mU321OYRtDLHBvV7u2mxpsjri4Lr9ptSUDNfGb83JvpNjPQ1jZriZAgKQqtSid8OvXJIHevFuI30i6g "; // Firebase > Project Settings > Cloud Messaging > Web Push certificates
+
+    // Google Sheets API
+    const SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets";
+    const SHEET_NAME = "Horas de trabajo";
+    // ═══════════════════════════════════════════════════════
+
+    // Init Firebase
+    firebase.initializeApp(FIREBASE_CONFIG);
+    const messaging = firebase.messaging();
+
+    // ── STATE ─────────────────────────────────────────────
+    const LS_CFG = 'horas_cfg_v2';
+    const LS_LOCAL = 'horas_local_v2'; // cache local mientras no hay conexión
+    let config = JSON.parse(localStorage.getItem(LS_CFG) || '{"notifs":false,"weekend":false,"times":["08:00","18:00"],"holidays":[],"sheetId":null}');
+    let entries = JSON.parse(localStorage.getItem(LS_LOCAL) || '[]');
+    let chips = { coche: false, comida: false, cena: false };
+    let calYear, calMonth;
+    let accessToken = null;
+    let currentUser = null;
+
+    // ── INIT ──────────────────────────────────────────────
+    function init() {
+      const today = new Date();
+      document.getElementById('f-fecha').value = today.toISOString().split('T')[0];
+      document.getElementById('r-fecha').value = today.toISOString().split('T')[0];
+      document.getElementById('f-inicio').value = today.toTimeString().slice(0, 5);
+      document.getElementById('hdr-date').textContent = today.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+      calYear = today.getFullYear();
+      calMonth = today.getMonth();
+      loadConfig();
+      renderCalendar();
+      registerSW();
+
+      // Firebase Auth state
+      firebase.auth().onAuthStateChanged(user => {
+        if (user) {
+          currentUser = user;
+          document.getElementById('login-overlay').classList.add('hidden');
+          document.getElementById('user-name').textContent = user.displayName || 'Usuario';
+          document.getElementById('user-email').textContent = user.email || '';
+          getAccessToken().then(() => {
+            ensureSheet().then(() => {
+              loadFromSheet();
+            });
+          });
+        } else {
+          document.getElementById('login-overlay').classList.remove('hidden');
+        }
+      });
+    }
+
+    // ── AUTH ──────────────────────────────────────────────
+    async function signInGoogle() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.addScope(SHEETS_SCOPE);
+      try {
+        await firebase.auth().signInWithPopup(provider);
+        const cred = await firebase.auth().currentUser.getIdTokenResult();
+        // get OAuth access token for Sheets API
+        const result = await firebase.auth().signInWithPopup(provider);
+        accessToken = result.credential.accessToken;
+      } catch (e) {
+        toast('Error al iniciar sesión', true);
+        console.error(e);
+      }
+    }
+
+    async function getAccessToken() {
+      try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.addScope(SHEETS_SCOPE);
+        const result = await firebase.auth().currentUser.getIdToken(true);
+        // Use stored token if available or re-auth
+        if (!accessToken) {
+          const r = await firebase.auth().signInWithCredential(
+            firebase.auth.GoogleAuthProvider.credential(null, localStorage.getItem('gat'))
+          );
+          accessToken = r.credential?.accessToken || localStorage.getItem('gat');
+        }
+      } catch (e) {
+        console.log('Token refresh needed');
+      }
+    }
+
+    function signOut() {
+      if (!confirm('¿Cerrar sesión?')) return;
+      firebase.auth().signOut();
+      accessToken = null;
+      entries = [];
+      renderResumen();
+    }
+
+    // ── GOOGLE SHEETS ─────────────────────────────────────
+    const HEADERS = ['ID', 'Fecha', 'Cliente', 'Inicio', 'Fin', 'Horas', 'Sitio', 'Obra/Albarán', 'Descripción', 'Coche empresa', 'Comida', 'Cena', 'Km personales'];
+
+    async function sheetsRequest(method, path, body) {
+      if (!accessToken) {
+        // Try to get token via re-authentication
+        try {
+          const provider = new firebase.auth.GoogleAuthProvider();
+          provider.addScope(SHEETS_SCOPE);
+          const r = await firebase.auth().currentUser.reauthenticateWithPopup(provider);
+          accessToken = r.credential.accessToken;
+        } catch (e) {
+          setSyncStatus('error');
+          return null;
+        }
+      }
+      const url = `https://sheets.googleapis.com/v4/spreadsheets${path}`;
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: body ? JSON.stringify(body) : undefined
+      });
+      if (res.status === 401) { accessToken = null; return null; }
+      return res.ok ? res.json() : null;
+    }
+
+    async function ensureSheet() {
+      setSyncStatus('syncing');
+      if (config.sheetId) { setSyncStatus('ok'); return; }
+      // Create new spreadsheet
+      const data = await sheetsRequest('POST', '', {
+        properties: { title: SHEET_NAME },
+        sheets: [{ properties: { title: 'Registros' } }]
+      });
+      if (data?.spreadsheetId) {
+        config.sheetId = data.spreadsheetId;
+        saveCfg();
+        // Write headers
+        await sheetsRequest('PUT', `/${config.sheetId}/values/Registros!A1?valueInputOption=RAW`, {
+          values: [HEADERS]
+        });
+        setSyncStatus('ok');
+      } else {
+        setSyncStatus('error');
+      }
+    }
+
+    async function loadFromSheet() {
+      if (!config.sheetId) return;
+      setSyncStatus('syncing');
+      const data = await sheetsRequest('GET', `/${config.sheetId}/values/Registros!A2:M?majorDimension=ROWS`);
+      if (!data) { setSyncStatus('error'); return; }
+      const rows = data.values || [];
+      entries = rows.map(r => ({
+        id: r[0] || Date.now(),
+        fecha: r[1] || '',
+        cliente: r[2] || '',
+        inicio: r[3] || '',
+        fin: r[4] || '',
+        sitio: r[6] || '',
+        obra: r[7] || '',
+        desc: r[8] || '',
+        coche: r[9] === 'Sí',
+        comida: r[10] === 'Sí',
+        cena: r[11] === 'Sí',
+        km: parseFloat(r[12]) || 0
+      }));
+      localStorage.setItem(LS_LOCAL, JSON.stringify(entries));
+      renderResumen();
+      setSyncStatus('ok');
+    }
+
+    async function appendToSheet(entry) {
+      if (!config.sheetId) return;
+      setSyncStatus('syncing');
+      const [h1, m1] = entry.inicio.split(':').map(Number);
+      const [h2, m2] = entry.fin.split(':').map(Number);
+      const horas = ((h2 * 60 + m2 - h1 * 60 - m1) / 60).toFixed(2);
+      const row = [
+        entry.id, entry.fecha, entry.cliente, entry.inicio, entry.fin,
+        horas, entry.sitio, entry.obra, entry.desc,
+        entry.coche ? 'Sí' : 'No', entry.comida ? 'Sí' : 'No', entry.cena ? 'Sí' : 'No', entry.km
+      ];
+      await sheetsRequest('POST', `/${config.sheetId}/values/Registros!A1:M1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+        values: [row]
+      });
+      setSyncStatus('ok');
+    }
+
+    async function deleteFromSheet(id) {
+      // reload all, remove row, rewrite
+      if (!config.sheetId) return;
+      setSyncStatus('syncing');
+      entries = entries.filter(e => e.id != id);
+      localStorage.setItem(LS_LOCAL, JSON.stringify(entries));
+
+      const rows = entries.map(e => {
+        const [h1, m1] = e.inicio.split(':').map(Number), [h2, m2] = e.fin.split(':').map(Number);
+        const h = ((h2 * 60 + m2 - h1 * 60 - m1) / 60).toFixed(2);
+        return [e.id, e.fecha, e.cliente, e.inicio, e.fin, h, e.sitio, e.obra, e.desc,
+        e.coche ? 'Sí' : 'No', e.comida ? 'Sí' : 'No', e.cena ? 'Sí' : 'No', e.km];
+      });
+
+      await sheetsRequest('PUT', `/${config.sheetId}/values/Registros!A2:M?valueInputOption=RAW`, {
+        values: rows.length ? rows : [['']]
+      });
+
+      // Clear extra rows if any
+      await sheetsRequest('POST', `/${config.sheetId}/values/Registros!A${rows.length + 2}:M1000:clear`, {});
+      setSyncStatus('ok');
+    }
+
+    function openSheet() {
+      if (config.sheetId) window.open(`https://docs.google.com/spreadsheets/d/${config.sheetId}`, '_blank');
+      else toast('Aún no hay hoja creada');
+    }
+
+    function setSyncStatus(state) {
+      const d = document.getElementById('sync-dot');
+      d.className = 'sync-indicator ' + state;
+    }
+
+    // ── SAVE ENTRY ────────────────────────────────────────
+    async function guardar() {
+      const fecha = document.getElementById('f-fecha').value;
+      const cliente = document.getElementById('f-cliente').value.trim();
+      const inicio = document.getElementById('f-inicio').value;
+      const fin = document.getElementById('f-fin').value;
+      const sitio = document.getElementById('f-sitio').value.trim();
+      const obra = document.getElementById('f-obra').value.trim();
+      const desc = document.getElementById('f-desc').value.trim();
+      const km = parseFloat(document.getElementById('f-km').value) || 0;
+      if (!fecha || !cliente || !inicio || !fin) { toast('Rellena fecha, cliente y horas', true); return; }
+
+      const btn = document.getElementById('save-btn');
+      btn.disabled = true; btn.textContent = 'Guardando…';
+
+      const entry = {
+        id: Date.now(), fecha, cliente, inicio, fin, sitio, obra, desc,
+        coche: chips.coche, comida: chips.comida, cena: chips.cena, km
+      };
+      entries.push(entry);
+      localStorage.setItem(LS_LOCAL, JSON.stringify(entries));
+
+      await appendToSheet(entry);
+      toast('Entrada guardada ✓');
+      btn.disabled = false; btn.textContent = 'Guardar entrada';
+
+      document.getElementById('f-cliente').value = '';
+      document.getElementById('f-sitio').value = '';
+      document.getElementById('f-obra').value = '';
+      document.getElementById('f-desc').value = '';
+      document.getElementById('f-km').value = '';
+      document.getElementById('f-inicio').value = fin;
+      document.getElementById('f-fin').value = '';
+      chips = { coche: false, comida: false, cena: false };
+      ['coche', 'comida', 'cena'].forEach(c => document.getElementById('chip-' + c).classList.remove('on'));
+    }
+
+    // ── UTILS ─────────────────────────────────────────────
+    function calcH(i, f) {
+      const [h1, m1] = i.split(':').map(Number), [h2, m2] = f.split(':').map(Number);
+      const m = (h2 * 60 + m2) - (h1 * 60 + m1); if (m <= 0) return '';
+      const h = Math.floor(m / 60), r = m % 60;
+      return h > 0 ? (r > 0 ? `${h}h${r}min` : `${h}h`) : `${r}min`;
+    }
+    function fmtDate(d) {
+      const [y, m, day] = d.split('-');
+      return new Date(y, m - 1, day).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+    }
+    function toast(msg, err = false) {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.style.background = err ? 'var(--danger)' : 'var(--accent)';
+      t.style.color = err ? '#fff' : '#0f0f0f'; t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2400);
+    }
+    function toggleChip(n) { chips[n] = !chips[n]; document.getElementById('chip-' + n).classList.toggle('on', chips[n]); }
+    function showPanel(name) {
+      ['nueva', 'resumen', 'ajustes'].forEach(p => {
+        document.getElementById('panel-' + p).classList.toggle('active', p === name);
+        document.getElementById('nav-' + p).classList.toggle('active', p === name);
+      });
+      if (name === 'resumen') renderResumen();
+    }
+
+    // ── RESUMEN ───────────────────────────────────────────
+    function renderResumen() {
+      const fd = document.getElementById('r-fecha')?.value;
+      let data = [...entries];
+      if (fd) data = data.filter(e => e.fecha === fd);
+      data.sort((a, b) => a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : a.inicio > b.inicio ? 1 : -1);
+      const byDay = {};
+      data.forEach(e => { (byDay[e.fecha] || (byDay[e.fecha] = [])).push(e); });
+      const days = Object.keys(byDay).sort().reverse();
+      const el = document.getElementById('resumen-list');
+      if (!days.length) { el.innerHTML = '<div class="empty">Sin entradas</div>'; return; }
+      el.innerHTML = days.map(day => {
+        const es = byDay[day];
+        const totalM = es.reduce((s, e) => {
+          const [h1, m1] = e.inicio.split(':').map(Number), [h2, m2] = e.fin.split(':').map(Number);
+          return s + (h2 * 60 + m2 - h1 * 60 - m1);
+        }, 0);
+        const totalKm = es.reduce((s, e) => s + e.km, 0);
+        const th = Math.floor(totalM / 60), tm = totalM % 60;
+        const ts = th > 0 ? (tm > 0 ? `${th}h ${tm}min` : `${th}h`) : `${tm}min`;
+        return `<div class="day-block">
+      <div class="day-head"><span class="day-name">${fmtDate(day)}</span><span class="day-total">${ts}${totalKm > 0 ? ` · ${totalKm}km` : ''}</span></div>
+      ${es.map(e => `<div class="entry-card">
+        <button class="del-btn" onclick="eliminar(${e.id})">✕</button>
+        <div class="entry-head"><span class="entry-client">${e.cliente}</span><span class="entry-time">${e.inicio}–${e.fin}${calcH(e.inicio, e.fin) ? ' (' + calcH(e.inicio, e.fin) + ')' : ''}</span></div>
+        ${e.sitio ? `<div class="entry-site">${e.sitio}</div>` : ''}
+        ${e.obra ? `<div class="entry-obra">${e.obra}</div>` : ''}
+        ${e.desc ? `<div class="entry-desc">${e.desc}</div>` : ''}
+        <div class="entry-chips">
+          <span class="entry-chip${e.coche ? ' active' : ''}">Coche empresa</span>
+          <span class="entry-chip${e.comida ? ' active' : ''}">Comida</span>
+          <span class="entry-chip${e.cena ? ' active' : ''}">Cena</span>
+          ${e.km > 0 ? `<span class="entry-chip active">${e.km} km</span>` : ''}
+        </div>
+      </div>`).join('')}
+    </div>`;
+      }).join('');
+    }
+
+    async function eliminar(id) {
+      if (!confirm('¿Eliminar esta entrada?')) return;
+      await deleteFromSheet(id);
+      renderResumen();
+    }
+
+    // ── EXPORT CSV ────────────────────────────────────────
+    function exportCSV() {
+      const header = HEADERS.join(',');
+      const rows = entries.sort((a, b) => a.fecha > b.fecha ? 1 : -1).map(e => {
+        const [h1, m1] = e.inicio.split(':').map(Number), [h2, m2] = e.fin.split(':').map(Number);
+        const h = ((h2 * 60 + m2 - h1 * 60 - m1) / 60).toFixed(2);
+        return [e.id, e.fecha, e.cliente, e.inicio, e.fin, h, e.sitio, e.obra,
+        `"${(e.desc || '').replace(/"/g, '""')}"`,
+        e.coche ? 'Sí' : 'No', e.comida ? 'Sí' : 'No', e.cena ? 'Sí' : 'No', e.km].join(',');
+      });
+      const blob = new Blob([header + '\n' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url;
+      a.download = `horas_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click(); URL.revokeObjectURL(url);
+      toast('CSV descargado');
+    }
+
+    // ── CONFIG ────────────────────────────────────────────
+    function saveCfg() {
+      config.notifs = document.getElementById('notif-toggle').checked;
+      config.weekend = document.getElementById('weekend-toggle').checked;
+      localStorage.setItem(LS_CFG, JSON.stringify(config));
+      if (config.notifs) scheduleNotifs();
+    }
+    function loadConfig() {
+      document.getElementById('notif-toggle').checked = config.notifs;
+      document.getElementById('weekend-toggle').checked = config.weekend;
+      renderTimes();
+    }
+    function renderTimes() {
+      document.getElementById('times-list').innerHTML = config.times.map((t, i) => `
+    <div class="time-badge">
+      <input type="time" value="${t}" onchange="updateTime(${i},this.value)">
+      <button class="remove-time" onclick="removeTime(${i})">✕</button>
+    </div>`).join('');
+    }
+    function addTime() { config.times.push('09:00'); saveCfg(); renderTimes(); }
+    function removeTime(i) { config.times.splice(i, 1); saveCfg(); renderTimes(); }
+    function updateTime(i, v) { config.times[i] = v; saveCfg(); }
+
+    // ── NOTIFICATIONS (FCM) ───────────────────────────────
+    async function toggleNotifs() {
+      const on = document.getElementById('notif-toggle').checked;
+      if (on) {
+        try {
+          const token = await messaging.getToken({ vapidKey: VAPID_KEY });
+          if (token) {
+            config.fcmToken = token;
+            saveCfg();
+            // Save token + schedule to Firestore via REST
+            await saveScheduleToFirestore(token);
+            toast('Recordatorios activados ✓');
+          }
+        } catch (e) {
+          document.getElementById('notif-toggle').checked = false;
+          toast('Activa los permisos de notificación', true);
+          console.error(e);
+        }
+      } else {
+        config.notifs = false; saveCfg();
+        toast('Recordatorios desactivados');
+      }
+    }
+
+    async function scheduleNotifs() {
+      if (!config.fcmToken) return;
+      await saveScheduleToFirestore(config.fcmToken);
+    }
+
+    async function saveScheduleToFirestore(token) {
+      if (!currentUser) return;
+      const projectId = FIREBASE_CONFIG.projectId;
+      const idToken = await firebase.auth().currentUser.getIdToken();
+      const body = {
+        fields: {
+          fcmToken: { stringValue: token },
+          times: { arrayValue: { values: config.times.map(t => ({ stringValue: t })) } },
+          holidays: { arrayValue: { values: config.holidays.map(d => ({ stringValue: d })) } },
+          notifyWeekends: { booleanValue: config.weekend },
+          uid: { stringValue: currentUser.uid }
+        }
+      };
+      await fetch(
+        `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/schedules/${currentUser.uid}`,
+        { method: 'PATCH', headers: { 'Authorization': `Bearer ${idToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+      );
+    }
+
+    messaging.onMessage(payload => {
+      toast('📋 ' + (payload.notification?.body || 'Recuerda anotar tus horas'));
+    });
+
+    // ── CALENDAR (festivos) ───────────────────────────────
+    function renderCalendar() {
+      const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+      document.getElementById('cal-title').textContent = `${months[calMonth]} ${calYear}`;
+      const first = new Date(calYear, calMonth, 1).getDay();
+      const offset = (first === 0 ? 6 : first - 1); // Mon first
+      const days = new Date(calYear, calMonth + 1, 0).getDate();
+      const today = new Date().toISOString().split('T')[0];
+      const dows = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+      let html = dows.map(d => `<div class="cal-dow">${d}</div>`).join('');
+      for (let i = 0; i < offset; i++) html += `<div class="cal-day empty"></div>`;
+      for (let d = 1; d <= days; d++) {
+        const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const dow = (offset + d - 1) % 7; // 0=Mon .. 6=Sun
+        const isWeekend = dow >= 5;
+        const isHoliday = config.holidays.includes(dateStr);
+        const isToday = dateStr === today;
+        let cls = 'cal-day';
+        if (isWeekend) cls += ' weekend';
+        if (isHoliday) cls += ' holiday';
+        if (isToday) cls += ' today-mark';
+        html += `<div class="${cls}" onclick="toggleHoliday('${dateStr}')">${d}</div>`;
+      }
+      document.getElementById('cal-grid').innerHTML = html;
+    }
+    function calPrev() { if (calMonth === 0) { calMonth = 11; calYear--; } else calMonth--; renderCalendar(); }
+    function calNext() { if (calMonth === 11) { calMonth = 0; calYear++; } else calMonth++; renderCalendar(); }
+    function toggleHoliday(d) {
+      const i = config.holidays.indexOf(d);
+      if (i >= 0) config.holidays.splice(i, 1); else config.holidays.push(d);
+      saveCfg(); renderCalendar();
+      if (config.notifs) saveScheduleToFirestore(config.fcmToken);
+    }
+
+    // ── SERVICE WORKER ────────────────────────────────────
+    function registerSW() {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(console.error);
+      }
+    }
+
+    init();
+  </script>
+</body>
+
+</html>
