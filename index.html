@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0f0f0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Horas">
+<title>Registro de Horas</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f0f0f;
+  --surface: #1a1a1a;
+  --surface2: #242424;
+  --border: #2e2e2e;
+  --accent: #d4ff6e;
+  --accent-dim: #a8cc50;
+  --text: #f0f0f0;
+  --text2: #888;
+  --text3: #555;
+  --danger: #ff5f57;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* LAYOUT */
+.app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+.header {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.header-title { font-size: 17px; font-weight: 500; letter-spacing: -0.02em; }
+.header-date { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text2); }
+.content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 0 80px; }
+.nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  display: flex;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  z-index: 100;
+}
+.nav-btn {
+  flex: 1; padding: 12px 8px; text-align: center; cursor: pointer;
+  border: none; background: none; color: var(--text2); font-family: 'DM Sans', sans-serif;
+  font-size: 11px; transition: color .15s;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.nav-btn .icon { font-size: 20px; line-height: 1; }
+.nav-btn.active { color: var(--accent); }
+
+/* PANELS */
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* FORM */
+.form-section { padding: 16px 20px 0; }
+.form-section + .form-section { margin-top: 4px; }
+.section-label {
+  font-size: 11px; font-weight: 500; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .1em;
+  margin-bottom: 10px;
+}
+.field { margin-bottom: 10px; }
+.field label { font-size: 12px; color: var(--text2); display: block; margin-bottom: 4px; }
+.field input, .field select, .field textarea {
+  width: 100%; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px 12px;
+  color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px;
+  -webkit-appearance: none; appearance: none;
+}
+.field textarea { resize: none; height: 80px; }
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none; border-color: var(--accent);
+}
+.field select { background-image: none; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.row2-3 { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+
+/* TOGGLE CHIPS */
+.chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  padding: 7px 14px; border: 1px solid var(--border);
+  border-radius: 100px; font-size: 13px; cursor: pointer;
+  background: var(--surface); color: var(--text2);
+  transition: all .15s; user-select: none;
+}
+.chip.on { background: var(--accent); border-color: var(--accent); color: #0f0f0f; font-weight: 500; }
+
+/* KM FIELD */
+.km-wrap { position: relative; }
+.km-wrap input { padding-right: 36px; }
+.km-unit {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace;
+}
+
+/* SAVE BUTTON */
+.save-btn {
+  margin: 20px 20px 0;
+  width: calc(100% - 40px);
+  padding: 14px;
+  background: var(--accent);
+  color: #0f0f0f;
+  border: none; border-radius: var(--radius);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px; font-weight: 500;
+  cursor: pointer; letter-spacing: -.01em;
+  transition: opacity .15s, transform .1s;
+}
+.save-btn:active { opacity: .8; transform: scale(.98); }
+
+/* RESUMEN */
+.filter-bar { padding: 14px 20px; display: flex; gap: 8px; align-items: center; }
+.filter-bar input {
+  flex: 1; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 9px 12px;
+  color: var(--text); font-family: 'DM Mono', monospace; font-size: 14px;
+}
+.filter-bar input:focus { outline: none; border-color: var(--accent); }
+.btn-ghost {
+  padding: 9px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: none; color: var(--text2); font-family: 'DM Sans', sans-serif;
+  font-size: 13px; cursor: pointer; white-space: nowrap;
+}
+.day-block { margin: 0 20px 16px; }
+.day-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 0 0 8px;
+}
+.day-name { font-weight: 500; font-size: 15px; }
+.day-total { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text2); }
+.entry-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 14px;
+  margin-bottom: 8px; position: relative;
+}
+.entry-card:last-child { margin-bottom: 0; }
+.entry-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
+.entry-client { font-weight: 500; font-size: 15px; flex: 1; }
+.entry-time { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--accent); white-space: nowrap; }
+.entry-site { font-size: 13px; color: var(--text2); margin-bottom: 4px; }
+.entry-obra { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); margin-bottom: 6px; }
+.entry-desc { font-size: 13px; color: var(--text2); margin-bottom: 8px; line-height: 1.4; }
+.entry-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.entry-chip {
+  font-size: 11px; padding: 2px 8px; border-radius: 100px;
+  background: var(--surface2); color: var(--text2); border: 1px solid var(--border);
+}
+.entry-chip.active { background: #1e2e0a; color: var(--accent); border-color: #3a5a10; }
+.del-btn {
+  position: absolute; top: 10px; right: 10px;
+  background: none; border: none; color: var(--text3); font-size: 16px;
+  cursor: pointer; padding: 4px 6px; border-radius: 6px;
+  line-height: 1;
+}
+.del-btn:active { color: var(--danger); }
+.empty { text-align: center; padding: 48px 20px; color: var(--text3); font-size: 14px; }
+
+/* AJUSTES */
+.settings-section { padding: 16px 20px; }
+.settings-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden; margin-bottom: 12px;
+}
+.settings-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid var(--border);
+}
+.settings-row:last-child { border-bottom: none; }
+.settings-label { font-size: 14px; }
+.settings-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.toggle {
+  position: relative; width: 44px; height: 26px; cursor: pointer;
+}
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute; inset: 0; background: var(--surface2);
+  border-radius: 100px; border: 1px solid var(--border);
+  transition: background .2s;
+}
+.toggle input:checked ~ .toggle-track { background: var(--accent); border-color: var(--accent); }
+.toggle-thumb {
+  position: absolute; top: 3px; left: 3px;
+  width: 18px; height: 18px; background: var(--text2);
+  border-radius: 50%; transition: transform .2s, background .2s;
+}
+.toggle input:checked ~ .toggle-track .toggle-thumb {
+  transform: translateX(18px); background: #0f0f0f;
+}
+.time-input-row {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+}
+.time-badge {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 6px 10px;
+}
+.time-badge input[type=time] {
+  background: none; border: none; color: var(--text);
+  font-family: 'DM Mono', monospace; font-size: 14px;
+  width: 80px; padding: 0;
+}
+.time-badge input[type=time]:focus { outline: none; }
+.remove-time { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 14px; padding: 0 2px; }
+.add-time-btn {
+  padding: 6px 12px; border: 1px dashed var(--border); border-radius: var(--radius-sm);
+  background: none; color: var(--text2); font-family: 'DM Sans', sans-serif;
+  font-size: 13px; cursor: pointer;
+}
+
+/* TOAST */
+.toast {
+  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(8px);
+  background: var(--accent); color: #0f0f0f;
+  padding: 9px 20px; border-radius: 100px;
+  font-size: 13px; font-weight: 500;
+  opacity: 0; transition: opacity .2s, transform .2s;
+  pointer-events: none; z-index: 999; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 0; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-title">Registro de horas</div>
+    <div class="header-date" id="hdr-date"></div>
+  </div>
+
+  <div class="content">
+    <!-- PANEL NUEVA ENTRADA -->
+    <div class="panel active" id="panel-nueva">
+      <div class="form-section">
+        <div class="row2">
+          <div class="field">
+            <label>Fecha</label>
+            <input type="date" id="f-fecha">
+          </div>
+          <div class="field">
+            <label>Cliente</label>
+            <input type="text" id="f-cliente" placeholder="Cliente">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Hora inicio</label>
+            <input type="time" id="f-inicio">
+          </div>
+          <div class="field">
+            <label>Hora fin</label>
+            <input type="time" id="f-fin">
+          </div>
+        </div>
+        <div class="field">
+          <label>Sitio / Ubicación</label>
+          <input type="text" id="f-sitio" placeholder="Dirección o lugar de trabajo">
+        </div>
+        <div class="field">
+          <label>Nº obra / Nº albarán</label>
+          <input type="text" id="f-obra" placeholder="OBR-001 · ALB-045">
+        </div>
+        <div class="field">
+          <label>Descripción</label>
+          <textarea id="f-desc" placeholder="Describe el trabajo realizado..."></textarea>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="section-label">Extras</div>
+        <div class="chip-group">
+          <div class="chip" id="chip-coche" onclick="toggleChip('coche')">Coche empresa</div>
+          <div class="chip" id="chip-comida" onclick="toggleChip('comida')">Comida</div>
+          <div class="chip" id="chip-cena" onclick="toggleChip('cena')">Cena</div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="section-label">Kilómetros coche personal</div>
+        <div class="field" style="max-width:140px">
+          <div class="km-wrap">
+            <input type="number" id="f-km" min="0" step="1" placeholder="0">
+            <span class="km-unit">km</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="save-btn" onclick="guardar()">Guardar entrada</button>
+      <div style="height:8px"></div>
+    </div>
+
+    <!-- PANEL RESUMEN -->
+    <div class="panel" id="panel-resumen">
+      <div class="filter-bar">
+        <input type="date" id="r-fecha" oninput="renderResumen()">
+        <button class="btn-ghost" onclick="document.getElementById('r-fecha').value='';renderResumen()">Todo</button>
+      </div>
+      <div id="resumen-list"></div>
+    </div>
+
+    <!-- PANEL AJUSTES -->
+    <div class="panel" id="panel-ajustes">
+      <div class="settings-section">
+        <div class="section-label" style="margin-bottom:10px">Notificaciones de recordatorio</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Activar recordatorios</div>
+              <div class="settings-sub">Notificación para rellenar el registro</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="notif-toggle" onchange="toggleNotifs()">
+              <div class="toggle-track"><div class="toggle-thumb"></div></div>
+            </label>
+          </div>
+          <div class="settings-row" id="times-row" style="flex-direction:column;align-items:flex-start;gap:10px">
+            <div class="settings-label">Horarios de aviso</div>
+            <div class="time-input-row" id="times-list"></div>
+            <button class="add-time-btn" onclick="addTime()">+ Añadir hora</button>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Exportar datos</div>
+              <div class="settings-sub">Descarga todas las entradas en CSV</div>
+            </div>
+            <button class="btn-ghost" onclick="exportCSV()">Exportar</button>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Borrar todo</div>
+              <div class="settings-sub">Elimina todas las entradas guardadas</div>
+            </div>
+            <button class="btn-ghost" style="color:var(--danger);border-color:var(--danger)" onclick="borrarTodo()">Borrar</button>
+          </div>
+        </div>
+
+        <div style="font-size:12px;color:var(--text3);text-align:center;padding-top:8px">
+          Los datos se guardan localmente en tu dispositivo
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <button class="nav-btn active" id="nav-nueva" onclick="showPanel('nueva')">
+      <span class="icon">＋</span>Nueva
+    </button>
+    <button class="nav-btn" id="nav-resumen" onclick="showPanel('resumen')">
+      <span class="icon">☰</span>Resumen
+    </button>
+    <button class="nav-btn" id="nav-ajustes" onclick="showPanel('ajustes')">
+      <span class="icon">⚙</span>Ajustes
+    </button>
+  </nav>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────
+const LS = 'horas_v2';
+const LS_CFG = 'horas_cfg';
+let entries = JSON.parse(localStorage.getItem(LS) || '[]');
+let config = JSON.parse(localStorage.getItem(LS_CFG) || '{"notifs":false,"times":["08:00","18:00"]}');
+let chips = { coche: false, comida: false, cena: false };
+
+function saveData() { localStorage.setItem(LS, JSON.stringify(entries)); }
+function saveCfg() { localStorage.setItem(LS_CFG, JSON.stringify(config)); }
+
+// ── INIT ──────────────────────────────────────────────────────────
+function init() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('f-fecha').value = today;
+  document.getElementById('r-fecha').value = today;
+  const now = new Date();
+  document.getElementById('f-inicio').value = now.toTimeString().slice(0,5);
+  document.getElementById('hdr-date').textContent = now.toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'});
+  loadConfig();
+  renderResumen();
+  registerSW();
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────────
+function showPanel(name) {
+  ['nueva','resumen','ajustes'].forEach(p => {
+    document.getElementById('panel-'+p).classList.toggle('active', p===name);
+    document.getElementById('nav-'+p).classList.toggle('active', p===name);
+  });
+  if(name==='resumen') renderResumen();
+}
+
+// ── CHIPS ─────────────────────────────────────────────────────────
+function toggleChip(name) {
+  chips[name] = !chips[name];
+  document.getElementById('chip-'+name).classList.toggle('on', chips[name]);
+}
+
+// ── SAVE ENTRY ────────────────────────────────────────────────────
+function guardar() {
+  const fecha   = document.getElementById('f-fecha').value;
+  const cliente = document.getElementById('f-cliente').value.trim();
+  const inicio  = document.getElementById('f-inicio').value;
+  const fin     = document.getElementById('f-fin').value;
+  const sitio   = document.getElementById('f-sitio').value.trim();
+  const obra    = document.getElementById('f-obra').value.trim();
+  const desc    = document.getElementById('f-desc').value.trim();
+  const km      = parseFloat(document.getElementById('f-km').value) || 0;
+
+  if (!fecha || !cliente || !inicio || !fin) {
+    toast('Rellena fecha, cliente y horas', true); return;
+  }
+
+  entries.push({ id: Date.now(), fecha, cliente, inicio, fin, sitio, obra, desc,
+    coche: chips.coche, comida: chips.comida, cena: chips.cena, km });
+  saveData();
+  toast('Entrada guardada ✓');
+
+  // Reset
+  document.getElementById('f-cliente').value = '';
+  document.getElementById('f-sitio').value = '';
+  document.getElementById('f-obra').value = '';
+  document.getElementById('f-desc').value = '';
+  document.getElementById('f-km').value = '';
+  document.getElementById('f-inicio').value = fin;
+  document.getElementById('f-fin').value = '';
+  chips = { coche: false, comida: false, cena: false };
+  ['coche','comida','cena'].forEach(c => document.getElementById('chip-'+c).classList.remove('on'));
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────
+function calcH(i, f) {
+  const [h1,m1]=i.split(':').map(Number), [h2,m2]=f.split(':').map(Number);
+  const m = (h2*60+m2)-(h1*60+m1);
+  if(m<=0) return '';
+  const h=Math.floor(m/60), r=m%60;
+  return h>0 ? (r>0?`${h}h${r}min`:`${h}h`) : `${r}min`;
+}
+function fmtDate(d) {
+  const [y,m,day]=d.split('-');
+  return new Date(y,m-1,day).toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
+}
+function toast(msg, err=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = err ? 'var(--danger)' : 'var(--accent)';
+  t.style.color = err ? '#fff' : '#0f0f0f';
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+// ── RESUMEN ───────────────────────────────────────────────────────
+function renderResumen() {
+  const fd = document.getElementById('r-fecha')?.value;
+  let data = [...entries];
+  if (fd) data = data.filter(e=>e.fecha===fd);
+  data.sort((a,b)=>a.fecha<b.fecha?1:a.fecha>b.fecha?-1:a.inicio>b.inicio?1:-1);
+
+  const byDay = {};
+  data.forEach(e=>{ (byDay[e.fecha]||(byDay[e.fecha]=[])).push(e); });
+  const days = Object.keys(byDay).sort().reverse();
+
+  const el = document.getElementById('resumen-list');
+  if (!days.length) { el.innerHTML='<div class="empty">Sin entradas para mostrar</div>'; return; }
+
+  el.innerHTML = days.map(day => {
+    const es = byDay[day];
+    const totalM = es.reduce((s,e)=>{
+      const [h1,m1]=e.inicio.split(':').map(Number),[h2,m2]=e.fin.split(':').map(Number);
+      return s+(h2*60+m2-h1*60-m1);
+    },0);
+    const totalKm = es.reduce((s,e)=>s+e.km,0);
+    const th=Math.floor(totalM/60),tm=totalM%60;
+    const totalStr=th>0?(tm>0?`${th}h ${tm}min`:`${th}h`):`${tm}min`;
+
+    return `<div class="day-block">
+      <div class="day-head">
+        <span class="day-name">${fmtDate(day)}</span>
+        <span class="day-total">${totalStr}${totalKm>0?` · ${totalKm}km`:''}</span>
+      </div>
+      ${es.map(e=>`
+      <div class="entry-card">
+        <button class="del-btn" onclick="eliminar(${e.id})">✕</button>
+        <div class="entry-head">
+          <span class="entry-client">${e.cliente}</span>
+          <span class="entry-time">${e.inicio}–${e.fin}${calcH(e.inicio,e.fin)?' ('+calcH(e.inicio,e.fin)+')':''}</span>
+        </div>
+        ${e.sitio?`<div class="entry-site">${e.sitio}</div>`:''}
+        ${e.obra?`<div class="entry-obra">${e.obra}</div>`:''}
+        ${e.desc?`<div class="entry-desc">${e.desc}</div>`:''}
+        <div class="entry-chips">
+          <span class="entry-chip${e.coche?' active':''}">Coche empresa</span>
+          <span class="entry-chip${e.comida?' active':''}">Comida</span>
+          <span class="entry-chip${e.cena?' active':''}">Cena</span>
+          ${e.km>0?`<span class="entry-chip active">${e.km} km</span>`:''}
+        </div>
+      </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function eliminar(id) {
+  if (!confirm('¿Eliminar esta entrada?')) return;
+  entries = entries.filter(e=>e.id!==id);
+  saveData(); renderResumen();
+}
+
+// ── EXPORT CSV ────────────────────────────────────────────────────
+function exportCSV() {
+  const header = 'Fecha,Cliente,Inicio,Fin,Horas,Sitio,Obra/Albarán,Descripción,Coche empresa,Comida,Cena,Km personales';
+  const rows = entries.sort((a,b)=>a.fecha>b.fecha?1:-1).map(e => {
+    const [h1,m1]=e.inicio.split(':').map(Number),[h2,m2]=e.fin.split(':').map(Number);
+    const h=((h2*60+m2-h1*60-m1)/60).toFixed(2);
+    return [e.fecha,e.cliente,e.inicio,e.fin,h,e.sitio,e.obra,
+      `"${(e.desc||'').replace(/"/g,'""')}"`,
+      e.coche?'Sí':'No',e.comida?'Sí':'No',e.cena?'Sí':'No',e.km].join(',');
+  });
+  const blob = new Blob([header+'\n'+rows.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url;
+  a.download=`horas_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  toast('CSV descargado');
+}
+
+function borrarTodo() {
+  if (!confirm('¿Borrar TODAS las entradas? Esta acción no se puede deshacer.')) return;
+  entries = []; saveData(); renderResumen(); toast('Datos borrados');
+}
+
+// ── NOTIFICATIONS ─────────────────────────────────────────────────
+function loadConfig() {
+  document.getElementById('notif-toggle').checked = config.notifs;
+  renderTimes();
+}
+
+function renderTimes() {
+  const el = document.getElementById('times-list');
+  el.innerHTML = config.times.map((t,i)=>`
+    <div class="time-badge">
+      <input type="time" value="${t}" onchange="updateTime(${i},this.value)">
+      <button class="remove-time" onclick="removeTime(${i})">✕</button>
+    </div>`).join('');
+}
+
+function addTime() {
+  config.times.push('09:00'); saveCfg(); renderTimes();
+}
+function removeTime(i) {
+  config.times.splice(i,1); saveCfg(); renderTimes();
+}
+function updateTime(i,v) {
+  config.times[i]=v; saveCfg();
+  if(config.notifs) scheduleNotifs();
+}
+
+async function toggleNotifs() {
+  const on = document.getElementById('notif-toggle').checked;
+  if (on) {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') {
+      document.getElementById('notif-toggle').checked = false;
+      toast('Permiso de notificaciones denegado', true); return;
+    }
+    config.notifs = true; saveCfg(); scheduleNotifs();
+    toast('Recordatorios activados ✓');
+  } else {
+    config.notifs = false; saveCfg();
+    toast('Recordatorios desactivados');
+  }
+}
+
+function scheduleNotifs() {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.ready.then(reg => {
+    reg.active.postMessage({ type: 'SET_ALARMS', times: config.times });
+  });
+}
+
+// ── SERVICE WORKER ────────────────────────────────────────────────
+function registerSW() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      console.log('SW registrado');
+      if (config.notifs) scheduleNotifs();
+    });
+  }
+}
+
+init();
+</script>
+</body>
+</html>
